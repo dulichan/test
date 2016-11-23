@@ -1,0 +1,107 @@
+grammar org.wso2.carbon.integration.ConfigurationLanguage with org.eclipse.xtext.common.Terminals
+
+generate configurationLanguage "http://www.wso2.org/carbon/integration/ConfigurationLanguage"
+
+Model:
+	(elements+=TopLevelElement)*;
+	
+TopLevelElement:
+	Endpoint | DataType | Connection | Sequence | NamespaceDef;
+	
+NamespaceDef:
+	'var' name=ID '=' '{'
+		bindings+=NamespaceBinding (',' bindings+=NamespaceBinding)*
+	'}';
+	
+NamespaceBinding:
+	(prefix=ID | 'xmlns') ':' url=STRING;		
+	
+Endpoint:
+	('inbound-endpoint' | 'outbound-endpoint') (name=ID)? '{'
+		(endpoints+=SubEndpoint)+
+	'}';			
+	
+SubEndpoint:
+	HttpEndpoint | JmsEndpoint;
+		
+HttpEndpoint:
+	'http' (name=ID)? '{'
+		'request {'
+			requestParams+=HttpParam (requestParams+=HttpParam)*
+		'}'
+		('response {'
+			responseParams+=HttpParam (',' responseParams+=HttpParam)*
+		'}')?
+	'}';		
+
+HttpParam:
+	(Method | ContentType | Path | Header | URL) ';';
+	
+URL:
+	'url:' url=STRING;	
+		
+Method:
+	'method:' (method=MethodString | '[' methods+=MethodString (',' methods+=MethodString)* ']');
+	
+Header:
+	'header:' header=STRING;		
+	
+MethodString:
+	method=('GET' | 'POST' | 'PUT' | 'DELETE');
+	
+ContentType:
+	'content-type:' type=STRING;	
+	
+Path:
+	'path:' path=STRING;
+	
+JmsEndpoint:
+	'jms {'
+		parameters+=JmsParam (',' parameters+=JmsParam)*
+	'}';					
+	
+JmsParam:
+	(Destination | ContentType) ';';
+	
+Destination:
+	'destination:' dest=STRING;
+	
+DataType:
+	'typedef' name=ID '{'
+		(fields+=DataField)*	
+	'}';	
+	
+DataField:
+	BasicType name=ID ';' | 'array' typeName=[DataType] name=ID ';';	
+	
+BasicType:
+	type=('string' | 'number' | 'boolean' | 'xml' | 'binary' | 'any');	
+	
+Connection:
+	'connect' start=ConnectionNode (links+=Link)+;
+	
+Link:
+	'->' end=ConnectionNode;	
+	
+Connectable:
+	Sequence | Endpoint;	
+	
+ConnectionNode:
+	Connectable | ref=[Connectable];
+	
+Sequence:
+	(Annotation)?	
+	'sequence' (name=ID)? '{'
+		(expr+=CastExpr)*
+	'}';
+	
+CastExpr:
+	'var' name=ID '=' 'cast' variable=ID 'as' typeName=[DataType] 'using' f=MessageFormat ';';		
+	
+Annotation:
+	'@cast $message as ' typeName=[DataType] 'using' f=MessageFormat;
+	
+MessageFormat:
+	format=('xml' | 'json');		
+	
+	
